@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#300638">
+  <title>Fórmula Açaí | Cardápio digital</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Fórmula Açaí - início">
+      <img src="assets/logo-formula-acai.jpeg" alt="Logo Fórmula Açaí">
+    </a>
+    <button class="icon-button cart-shortcut" id="openCartTop" aria-label="Abrir carrinho">🛍️ <span id="topCartCount">0</span></button>
+  </header>
+
+  <main id="homePage" class="page">
+    <section class="hero" aria-label="Capa Fórmula Açaí">
+      <img src="assets/capa-formula-acai.jpeg" alt="Produtos Fórmula Açaí">
+      <div class="hero-shade"></div>
+      <div class="hero-copy">
+        <span class="eyebrow">FÓRMULA AÇAÍ</span>
+        <h1>Mais que açaí,<br>um estilo de vida!</h1>
+        <p>Escolha seus favoritos e monte seu pedido.</p>
+      </div>
+    </section>
+
+    <section class="menu-section">
+      <div class="section-heading">
+        <div><span class="eyebrow purple">FEITO PARA VOCÊ</span><h2>Nosso cardápio</h2></div>
+        <span class="open-indicator"><i></i> Peça agora</span>
+      </div>
+      <nav id="categoryNav" class="category-nav" aria-label="Categorias"></nav>
+      <div id="productGrid" class="product-grid"></div>
+      <div id="emptyProducts" class="empty-state hidden">Ainda não há produtos disponíveis nesta categoria.</div>
+    </section>
+  </main>
+
+  <section id="productPage" class="page subpage hidden">
+    <button class="back-button" id="backToMenu">← Voltar ao cardápio</button>
+    <div id="productDetail"></div>
+  </section>
+
+  <section id="checkoutPage" class="page subpage hidden">
+    <button class="back-button" id="backFromCheckout">← Voltar ao cardápio</button>
+    <div class="checkout-layout">
+      <div>
+        <span class="eyebrow purple">SÓ MAIS UM PASSO</span>
+        <h1>Confirme seu pedido</h1>
+        <p class="muted">Confira os itens e preencha seus dados para enviar pelo WhatsApp.</p>
+        <div id="checkoutItems" class="checkout-items"></div>
+      </div>
+      <form id="customerForm" class="customer-form">
+        <h2>Seus dados</h2>
+        <label>Nome e sobrenome<input name="customerName" required placeholder="Como podemos chamar você?"></label>
+        <section class="delivery-check" aria-labelledby="deliveryCheckTitle">
+          <h3 id="deliveryCheckTitle">Verifique se entregamos no seu endereço</h3>
+          <p class="tiny muted">Nossa área de entrega é de até <strong id="deliveryRadiusLabel">10 km</strong> da loja.</p>
+          <button type="button" id="useMyLocation" class="secondary-button delivery-location-button">📍 Usar minha localização</button>
+          <p class="tiny muted">Ou informe seu endereço abaixo e toque em “Verificar endereço”. Ao validar o endereço, ele será consultado no serviço OpenStreetMap para estimar a localização.</p>
+          <div id="deliveryStatus" class="delivery-status" role="status" aria-live="polite">Aguardando verificação da localização.</div>
+        </section>
+        <label>Endereço<input name="address" id="customerAddress" required placeholder="Rua, número, bairro, cidade..."></label>
+        <button type="button" id="checkTypedAddress" class="secondary-button">Verificar endereço</button>
+        <label>Ponto de referência<input name="reference" placeholder="Ex.: próximo à praça"></label>
+        <label>Observações do pedido<textarea name="notes" rows="3" placeholder="Alguma orientação especial?"></textarea></label>
+        <label>Forma de pagamento<select name="payment" id="paymentSelect" required></select></label>
+        <div class="checkout-summary-lines">
+          <div class="checkout-total"><span>Subtotal dos produtos</span><strong id="checkoutSubtotal">R$ 0,00</strong></div>
+          <div id="deliveryDistanceRow" class="checkout-total hidden"><span>Distância considerada</span><strong id="deliveryDistanceValue">—</strong></div>
+          <div id="deliveryFeeRow" class="checkout-total hidden"><span>Taxa de entrega</span><strong id="deliveryFeeValue">R$ 0,00</strong></div>
+          <div class="checkout-total grand-total"><span>Total do pedido</span><strong id="checkoutTotal">R$ 0,00</strong></div>
+        </div>
+        <button class="primary-button full" type="submit">Enviar pedido pelo WhatsApp <span>↗</span></button>
+        <p class="tiny muted">O WhatsApp será aberto com a mensagem pronta. Você precisará tocar em enviar.</p>
+      </form>
+    </div>
+  </section>
+
+  <aside id="cartBar" class="cart-bar">
+    <button id="openCart" class="cart-summary">
+      <span class="cart-icon">🛒 <b id="cartCount">0</b></span>
+      <span class="cart-label"><strong>Seu pedido</strong><small id="cartHint">Adicione seus favoritos</small></span>
+      <strong id="cartTotal">R$ 0,00</strong>
+    </button>
+    <button id="checkoutButton" class="cart-checkout" disabled>Finalizar</button>
+  </aside>
+
+  <footer class="site-footer">
+    <span>Fórmula Açaí · Sabor que nutre, energia que move.</span>
+    <button id="openAdmin" class="admin-access" title="Painel de gestão" aria-label="Abrir painel de gestão">👥</button>
+  </footer>
+
+  <div id="adminLoginModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+    <div class="modal-card login-card">
+      <button class="modal-close" data-close="adminLoginModal" aria-label="Fechar">×</button>
+      <span class="eyebrow purple">ÁREA RESTRITA</span><h2 id="loginTitle">Painel de gestão</h2>
+      <p class="muted">Entre com o e-mail e a senha do usuário administrador criado no Supabase.</p>
+      <form id="loginForm">
+        <label>E-mail<input id="adminEmail" type="email" required autocomplete="username" placeholder="admin@seudominio.com"></label>
+        <label>Senha<div class="password-wrap"><input id="adminPassword" type="password" required autocomplete="current-password" placeholder="Sua senha"><button type="button" id="togglePassword">Mostrar</button></div></label>
+        <p id="loginError" class="form-error hidden">Não foi possível entrar. Confira seu e-mail e senha.</p>
+        <button class="primary-button full" type="submit">Entrar</button>
+      </form>
+      <p class="tiny muted">O usuário administrador deve ser criado em Supabase → Authentication → Users. Não existe mais senha fixa no código.</p>
+    </div>
+  </div>
+
+  <section id="adminPage" class="admin-page hidden">
+    <header class="admin-header">
+      <div><span class="eyebrow">FÓRMULA AÇAÍ</span><h1>Painel de gestão</h1></div>
+      <button id="closeAdmin" class="secondary-button">← Voltar ao cardápio</button>
+    </header>
+    <div class="admin-tabs">
+      <button class="tab-button active" data-tab="productsTab">Produtos</button>
+      <button class="tab-button" data-tab="addonsTab">Adicionais</button>
+      <button class="tab-button" data-tab="customTab">Montagem</button>
+      <button class="tab-button" data-tab="settingsTab">Configurações</button>
+    </div>
+
+    <div id="productsTab" class="admin-tab-content">
+      <div class="admin-columns">
+        <form id="productForm" class="admin-panel">
+          <div class="panel-heading"><div><span class="eyebrow purple">CADASTRO</span><h2 id="productFormTitle">Adicionar produto</h2></div><button type="button" id="resetProductForm" class="text-button">Limpar</button></div>
+          <input type="hidden" id="editProductId">
+          <label>Nome do produto<input id="productName" required placeholder="Ex.: Copão 500 ml"></label>
+          <label>Descrição<textarea id="productDescription" rows="3" required placeholder="Descreva o produto..."></textarea></label>
+          <div class="form-row">
+            <label>Valor base (R$)<input id="productPrice" type="number" min="0" step="0.01" required placeholder="17,00"></label>
+            <label>Tipo de produto<select id="productType"><option value="ready">Produto pronto da loja</option><option value="custom">Montado conforme escolha do cliente</option></select></label>
+          </div>
+          <label>Categorias <span class="tiny muted">(selecione uma ou mais)</span></label>
+          <div id="productCategories" class="check-grid"></div>
+          <label>Imagem do produto<input id="productImage" type="file" accept="image/*"></label>
+          <div id="imagePreview" class="image-preview">Prévia da imagem</div>
+          <label class="check-line"><input id="productActive" type="checkbox" checked> Produto ativo no cardápio</label>
+          <div id="customProductSettings" class="hidden">
+            <div class="admin-note"><strong>Produto montado pelo cliente:</strong> defina os limites que serão aplicados somente a este produto.</div>
+            <div class="form-row">
+              <label>Quantidade máxima de acompanhamentos<input id="productAccompanimentLimit" type="number" min="0" step="1" value="3"></label>
+              <label>Quantidade máxima de cremes e caldas<input id="productCreamLimit" type="number" min="0" step="1" value="2"></label>
+            </div>
+            <label class="check-line"><input id="productUseSizes" type="checkbox"> Exibir tabela de tamanhos para este produto</label>
+            <div id="productSizePrices" class="hidden">
+              <p class="tiny muted">Defina o preço de cada tamanho. O cliente verá o valor correspondente ao selecionar.</p>
+              <div id="productSizePriceFields" class="form-row"></div>
+            </div>
+            <label>Acompanhamentos disponíveis para este produto <span class="tiny muted">(opcional)</span></label>
+            <div id="customAccompaniments" class="check-grid"></div>
+          </div>
+          <button class="primary-button full" type="submit">Salvar produto</button>
+        </form>
+        <div class="admin-panel">
+          <div class="panel-heading"><div><span class="eyebrow purple">CARDÁPIO</span><h2>Produtos cadastrados</h2></div><span id="adminProductCount" class="count-pill">0</span></div>
+          <div id="adminProductList" class="admin-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="addonsTab" class="admin-tab-content hidden">
+      <div class="admin-columns">
+        <form id="addonForm" class="admin-panel">
+          <div class="panel-heading"><div><span class="eyebrow purple">PERSONALIZAÇÃO</span><h2 id="addonFormTitle">Adicionar adicional</h2></div><button type="button" id="resetAddonForm" class="text-button">Limpar</button></div>
+          <input type="hidden" id="editAddonId">
+          <label>Nome do adicional<input id="addonName" required placeholder="Ex.: Leite em pó"></label>
+          <label>Valor (R$)<input id="addonPrice" type="number" min="0" step="0.01" required placeholder="2,00"></label>
+          <label class="check-line"><input id="addonActive" type="checkbox" checked> Adicional ativo</label>
+          <button class="primary-button full" type="submit">Salvar adicional</button>
+        </form>
+        <div class="admin-panel"><div class="panel-heading"><h2>Adicionais cadastrados</h2></div><div id="adminAddonList" class="admin-list"></div></div>
+      </div>
+    </div>
+
+    <div id="customTab" class="admin-tab-content hidden">
+      <div class="admin-columns">
+        <form id="customOptionForm" class="admin-panel">
+          <div class="panel-heading"><div><span class="eyebrow purple">MONTE DO SEU JEITO</span><h2 id="customOptionFormTitle">Adicionar opção de montagem</h2></div><button type="button" id="resetCustomOptionForm" class="text-button">Limpar</button></div>
+          <input type="hidden" id="editCustomOptionId">
+          <label>Ingrediente ou acompanhamento<input id="customOptionName" required placeholder="Ex.: Morango"></label>
+          <label class="check-line"><input id="customOptionActive" type="checkbox" checked> Opção ativa para o cliente</label>
+          <button class="primary-button full" type="submit">Salvar opção</button>
+        </form>
+        <div class="admin-panel"><div class="panel-heading"><h2>Opções de montagem</h2></div><div id="adminCustomOptionList" class="admin-list"></div></div>
+      </div>
+      <div class="admin-columns cream-admin-columns">
+        <form id="creamOptionForm" class="admin-panel">
+          <div class="panel-heading"><div><span class="eyebrow purple">CREMES E CALDAS</span><h2 id="creamOptionFormTitle">Adicionar creme ou calda</h2></div><button type="button" id="resetCreamOptionForm" class="text-button">Limpar</button></div>
+          <input type="hidden" id="editCreamOptionId">
+          <label>Nome do creme ou calda<input id="creamOptionName" required placeholder="Ex.: Creme de ninho"></label>
+          <label class="check-line"><input id="creamOptionActive" type="checkbox" checked> Opção ativa para o cliente</label>
+          <button class="primary-button full" type="submit">Salvar opção</button>
+        </form>
+        <div class="admin-panel"><div class="panel-heading"><h2>Cremes e caldas cadastrados</h2></div><div id="adminCreamOptionList" class="admin-list"></div></div>
+      </div>
+    </div>
+
+    <div id="settingsTab" class="admin-tab-content hidden">
+      <div class="admin-panel settings-panel">
+        <span class="eyebrow purple">PREFERÊNCIAS DA LOJA</span><h2>Formas de pagamento aceitas</h2>
+        <p class="muted">Marque as opções que aparecerão para o cliente na finalização.</p>
+        <div id="paymentOptions" class="check-grid payment-grid"></div>
+        <h2>Tamanhos de copo disponíveis</h2>
+        <p class="muted">Essas opções aparecerão nos produtos montados pelo cliente. Separe os tamanhos por vírgula.</p>
+        <label>Tamanhos disponíveis<input id="cupSizesInput" type="text" placeholder="Ex.: 300 ml, 500 ml, 700 ml, 1 litro"></label>
+        <p class="tiny muted">Você pode adicionar, remover ou alterar os tamanhos quando quiser.</p>
+        <h2>Área de entrega</h2>
+        <p class="muted">Defina o raio máximo de entrega em quilômetros e o ponto de origem da loja.</p>
+        <div class="form-row">
+          <label>Raio de entrega (km)<input id="deliveryRadiusKm" type="number" min="0.1" max="100" step="0.1" value="10"></label>
+          <label>Latitude da loja<input id="storeLatitude" type="number" step="0.000001" value="-16.608838"></label>
+        </div>
+        <label>Longitude da loja<input id="storeLongitude" type="number" step="0.000001" value="-49.308809"></label>
+        <p class="tiny muted">Ponto de origem configurado com base no local confirmado pelo Google Maps. O cálculo considera distância em linha reta. A taxa usa a faixa inteira seguinte: por exemplo, 2,3 km utiliza o valor cadastrado para 3 km.</p>
+        <h2>Valores de entrega por quilômetro</h2>
+        <p class="muted">Cadastre um preço diferente para cada faixa de 1 a 10 km. O sistema acrescentará automaticamente a taxa correspondente ao total do pedido.</p>
+        <div class="delivery-prices-grid">
+          <label>1 km (R$)<input id="deliveryPrice1" type="number" min="0" step="0.01" value="0.00"></label>
+          <label>2 km (R$)<input id="deliveryPrice2" type="number" min="0" step="0.01" value="0.00"></label>
+          <label>3 km (R$)<input id="deliveryPrice3" type="number" min="0" step="0.01" value="0.00"></label>
+          <label>4 km (R$)<input id="deliveryPrice4" type="number" min="0" step="0.01" value="0.00"></label>
+          <label>5 km (R$)<input id="deliveryPrice5" type="number" min="0" step="0.01" value="0.00"></label>
+          <label>6 km (R$)<input id="deliveryPrice6" type="number" min="0" step="0.01" value="0.00"></label>
+          <label>7 km (R$)<input id="deliveryPrice7" type="number" min="0" step="0.01" value="0.00"></label>
+          <label>8 km (R$)<input id="deliveryPrice8" type="number" min="0" step="0.01" value="0.00"></label>
+          <label>9 km (R$)<input id="deliveryPrice9" type="number" min="0" step="0.01" value="0.00"></label>
+          <label>10 km (R$)<input id="deliveryPrice10" type="number" min="0" step="0.01" value="0.00"></label>
+        </div>
+        <h2>Valor da colher</h2>
+        <p class="muted">O cliente será perguntado separadamente dos adicionais se deseja colher em cada produto.</p>
+        <label>Preço da colher (R$)<input id="spoonPrice" type="number" min="0" step="0.01" value="0.00"></label>
+        <button id="saveSettings" class="primary-button">Salvar configurações</button>
+        <div class="admin-panel cloud-panel">
+          <div class="panel-heading"><div><span class="eyebrow purple">SUPABASE</span><h2>Sincronização na nuvem</h2></div><span id="cloudStatusBadge" class="count-pill">Conectando…</span></div>
+          <p id="cloudSyncStatus" class="muted" role="status">Verificando conexão com a nuvem…</p>
+          <p id="cloudAdminEmail" class="tiny muted"></p>
+          <button id="publishCloudState" class="primary-button hidden" type="button">Enviar dados locais para a nuvem</button>
+          <button id="cloudAdminLogout" class="secondary-button hidden" type="button">Sair da conta administrativa</button>
+          <p class="tiny muted">O carrinho de cada cliente permanece neste dispositivo. Produtos, preços, categorias, adicionais e configurações são sincronizados.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="toast" class="toast" role="status"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
+
+.choice-limit{font-size:.78rem;color:#8e3cab;font-weight:600;margin-left:6px}.limits-panel{margin:22px 0}.cream-admin-columns{margin-top:22px}.limits-panel .form-row{max-width:760px}
