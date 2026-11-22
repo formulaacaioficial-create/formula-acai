@@ -30,3 +30,6 @@
 /* Tabela de taxas de entrega por faixa de quilometragem. */
 .delivery-prices-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0 22px}.checkout-summary-lines{display:grid;gap:8px}.checkout-summary-lines .checkout-total{border-top:1px solid #eaddec;padding-top:12px}.checkout-summary-lines .grand-total{margin-top:4px;border-top:2px solid #d9c5e0}.checkout-summary-lines #deliveryDistanceValue{font-size:.9rem}
 @media(max-width:540px){.delivery-prices-grid{grid-template-columns:1fr 1fr}}
+\n.category-manager{margin-bottom:22px}.from-label{color:#16834a;font-weight:700}.order-record{align-items:flex-start}\n
+/* Quantidade de colheres por produto */
+.spoon-quantity-row{align-items:center;flex-wrap:wrap}.spoon-quantity-input{width:90px!important;max-width:90px;border:1px solid #e5d9e9;border-radius:10px;padding:10px;background:#fff;color:var(--ink);font:inherit}

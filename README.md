@@ -66,3 +66,18 @@ O checkout agora valida a localização antes de permitir o envio do pedido. O r
 O cliente deve preencher o endereço de entrega e então escolher **Usar minha localização** (GPS do navegador) ou **Verificar endereço**. A validação por endereço consulta o serviço público Nominatim/OpenStreetMap; o texto do endereço digitado é enviado a esse serviço para encontrar coordenadas. A localização GPS depende da permissão do navegador e de contexto seguro (HTTPS ou localhost).
 
 A distância é calculada em linha reta (fórmula de Haversine), não pelo percurso das ruas. A validação é uma barreira no front-end deste protótipo e não substitui uma validação no servidor para operação pública/produção.
+
+
+## Atualizações desta versão
+- Seleção individual dos tamanhos de copo permitidos em cada produto personalizado, com preço por tamanho.
+- Categorias podem ser adicionadas e excluídas no painel de gestão.
+- Todos os preços no cardápio passam a exibir o texto “A partir de” em verde.
+- Cremes e caldas continuam separados dos acompanhamentos.
+- Preço unitário da colher configurável e somado ao pedido conforme a seleção do cliente.
+- Nova aba Pedidos com visualização dos pedidos do dia e histórico recente (até 300 registros).
+- Para ativar o registro e histórico dos pedidos, execute `formula-acai-orders.sql` no SQL Editor do Supabase. Esse script cria apenas a tabela `orders`; não altera nem apaga `store_state`.
+- Depois de executar o SQL, publique todos os arquivos do ZIP no GitHub Pages. Pedidos novos serão gravados no Supabase; os anteriores ao uso desta função não serão recuperados automaticamente.
+
+
+### Colheres por produto
+O cliente informa a quantidade de colheres (de 0 a 20) em cada produto. O painel de gestão configura um único preço unitário; o sistema calcula quantidade × preço unitário, apresenta o valor no carrinho e registra a quantidade e o preço no JSON do pedido. Pedidos antigos continuam compatíveis: quando não houver `spoonQty`, o campo legado `wantsSpoon` é interpretado como zero ou uma colher.

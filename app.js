@@ -164,14 +164,14 @@ async function initCloud(){
 }
 
 function money(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});}
-function productStartingPrice(p){if(p.type!=="custom"||(p.useSizes===false))return Number(p.price||0);const prices=(state.cupSizes||[]).map(size=>Number(p.sizePrices?.[size]??p.price));return prices.length?Math.min(...prices):Number(p.price||0);}
+function productStartingPrice(p){if(p.type!=="custom"||(p.useSizes===false))return Number(p.price||0);const prices=(Array.isArray(p.availableSizes)&&p.availableSizes.length?p.availableSizes:(state.cupSizes||[])).map(size=>Number(p.sizePrices?.[size]??p.price));return prices.length?Math.min(...prices):Number(p.price||0);}
 function uid(){return "id-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8);}
 function escapeHtml(s=""){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function toast(message){const el=document.getElementById("toast");el.textContent=message;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),2600);}
 function activeProducts(){return state.products.filter(p=>p.active);}
-function itemTotal(item){return (Number(item.price)+(item.addons||[]).reduce((s,a)=>s+a.price,0)+(item.wantsSpoon?Number(item.spoonPrice||0):0))*item.qty;}
+function itemTotal(item){const spoonQty=Number(item.spoonQty ?? (item.wantsSpoon?1:0));return (Number(item.price)+(item.addons||[]).reduce((s,a)=>s+a.price,0)+(spoonQty*Number(item.spoonPrice||0)))*item.qty;}
 function cartTotal(){return state.cart.reduce((s,i)=>s+itemTotal(i),0);}
-function renderAll(){renderCategories();renderProducts();renderCart();renderAdminProducts();renderAdminAddons();renderAdminCustomOptions();renderAdminCreamOptions();renderPaymentOptions();}
+function renderAll(){renderCategories();renderProducts();renderCart();renderAdminProducts();renderAdminCategories();renderAdminAddons();renderAdminCustomOptions();renderAdminCreamOptions();renderPaymentOptions();}
 
 function renderCategories(){
   const cats=["Todos",...state.categories];
@@ -184,7 +184,7 @@ function renderProducts(){
     <article class="product-card" data-product="${p.id}">
       ${p.image?`<img src="${p.image}" alt="${escapeHtml(p.name)}">`:`<div class="product-placeholder">🍇</div>`}
       <div class="product-info"><h3>${escapeHtml(p.name)}</h3><p>${escapeHtml(p.description)}</p>
-      <div class="price-from">${p.type==="custom"&&p.useSizes!==false?"A partir de ":""}<strong>${money(productStartingPrice(p))}</strong></div><span class="add-hint">Ver produto →</span></div>
+      <div class="price-from"><span class="from-label">A partir de</span> <strong>${money(productStartingPrice(p))}</strong></div><span class="add-hint">Ver produto →</span></div>
     </article>`).join("");
   document.getElementById("emptyProducts").classList.toggle("hidden",list.length>0);
   document.querySelectorAll("[data-product]").forEach(card=>card.addEventListener("click",()=>openProduct(card.dataset.product)));
@@ -211,21 +211,22 @@ function openProduct(id){
   const maxAccompaniments=Number(p.maxAccompaniments ?? state.accompanimentLimit);
   const maxCreams=Number(p.maxCreams ?? state.creamLimit);
   const useSizes=p.type==="custom" && (p.useSizes===undefined ? true : !!p.useSizes);
+  const availableSizes=(Array.isArray(p.availableSizes)&&p.availableSizes.length?p.availableSizes:state.cupSizes);
   const sizePriceMap=p.sizePrices||{};
-  const initialPrice=useSizes?Math.min(...state.cupSizes.map(size=>Number(sizePriceMap[size]??p.price))):Number(p.price);
+  const initialPrice=useSizes?Math.min(...availableSizes.map(size=>Number(sizePriceMap[size]??p.price))):Number(p.price);
   document.getElementById("productDetail").innerHTML=`
     <div class="detail-layout">
       <div>${p.image?`<img class="detail-image" src="${p.image}" alt="${escapeHtml(p.name)}">`:`<div class="product-placeholder detail-image">🍇</div>`}</div>
-      <div class="detail-content"><span class="eyebrow purple">FÓRMULA AÇAÍ</span><h1>${escapeHtml(p.name)}</h1><p class="detail-description">${escapeHtml(p.description)}</p><div class="detail-price">${useSizes?`A partir de ${money(initialPrice)}`:money(p.price)}</div>
-      ${p.type==="custom"?`${useSizes?`<div class="option-group"><h3>Tamanho do copo</h3><label class="cup-size-field">Selecione o tamanho<select id="cupSizeChoice" required><option value="">Escolha o tamanho</option>${state.cupSizes.map(size=>`<option value="${escapeHtml(size)}">${escapeHtml(size)} · ${money(sizePriceMap[size]??p.price)}</option>`).join("")}</select></label></div>`:""}<div class="option-group"><h3>Acompanhamentos <small class="choice-limit">Escolha até ${maxAccompaniments}</small></h3>${customOptions.length?customOptions.map(o=>`<div class="option-row"><label><input type="checkbox" class="custom-choice" value="${escapeHtml(o.name)}"> ${escapeHtml(o.name)}</label><span>Incluso</span></div>`).join(""):`<p class="muted tiny">A loja ainda não cadastrou opções de montagem.</p>`}</div><div class="option-group"><h3>Cremes e caldas <small class="choice-limit">Escolha até ${maxCreams}</small></h3>${creamOptions.length?creamOptions.map(o=>`<div class="option-row"><label><input type="checkbox" class="cream-choice" value="${escapeHtml(o.name)}"> ${escapeHtml(o.name)}</label><span>Incluso</span></div>`).join(""):`<p class="muted tiny">A loja ainda não cadastrou cremes ou caldas.</p>`}</div>`:""}
+      <div class="detail-content"><span class="eyebrow purple">FÓRMULA AÇAÍ</span><h1>${escapeHtml(p.name)}</h1><p class="detail-description">${escapeHtml(p.description)}</p><div class="detail-price">A partir de ${money(productStartingPrice(p))}</div>
+      ${p.type==="custom"?`${useSizes?`<div class="option-group"><h3>Tamanho do copo</h3><label class="cup-size-field">Selecione o tamanho<select id="cupSizeChoice" required><option value="">Escolha o tamanho</option>${availableSizes.map(size=>`<option value="${escapeHtml(size)}">${escapeHtml(size)} · ${money(sizePriceMap[size]??p.price)}</option>`).join("")}</select></label></div>`:""}<div class="option-group"><h3>Acompanhamentos <small class="choice-limit">Escolha até ${maxAccompaniments}</small></h3>${customOptions.length?customOptions.map(o=>`<div class="option-row"><label><input type="checkbox" class="custom-choice" value="${escapeHtml(o.name)}"> ${escapeHtml(o.name)}</label><span>Incluso</span></div>`).join(""):`<p class="muted tiny">A loja ainda não cadastrou opções de montagem.</p>`}</div><div class="option-group"><h3>Cremes e caldas <small class="choice-limit">Escolha até ${maxCreams}</small></h3>${creamOptions.length?creamOptions.map(o=>`<div class="option-row"><label><input type="checkbox" class="cream-choice" value="${escapeHtml(o.name)}"> ${escapeHtml(o.name)}</label><span>Incluso</span></div>`).join(""):`<p class="muted tiny">A loja ainda não cadastrou cremes ou caldas.</p>`}</div>`:""}
       <div class="option-group"><h3>Deseja adicionar algo?</h3>${addons.length?addons.map(a=>`<div class="option-row"><label><input type="checkbox" class="addon-choice" data-id="${a.id}"> ${escapeHtml(a.name)}</label><span>+ ${money(a.price)}</span></div>`).join(""):`<p class="muted tiny">Nenhum adicional disponível no momento.</p>`}</div>
-      <div class="option-group"><h3>Deseja colher?</h3><div class="option-row"><label><input type="checkbox" id="spoonChoice"> Sim, quero colher</label><span>Valor da colher: ${Number(state.spoonPrice)>0?money(state.spoonPrice):"Grátis"}</span></div></div>
+      <div class="option-group"><h3>Quantidade de colheres</h3><div class="option-row spoon-quantity-row"><label for="spoonQuantity">Quantas colheres deseja?</label><input id="spoonQuantity" class="spoon-quantity-input" type="number" min="0" max="20" step="1" value="0" inputmode="numeric"><span>Unitária: ${Number(state.spoonPrice)>0?money(state.spoonPrice):"Grátis"}</span></div><p class="tiny muted">Escolha 0 se não quiser colher. O valor será calculado por unidade.</p></div>
       <div class="option-group"><h3>Quantidade</h3><div class="qty-control"><button type="button" id="qtyMinus">−</button><strong id="productQty">1</strong><button type="button" id="qtyPlus">+</button></div></div>
       <button id="addProductToCart" class="primary-button detail-add"><span>Adicionar ao pedido</span><strong id="detailButtonPrice">${money(p.price)}</strong></button></div>
     </div>`;
   let qty=1;
   const selectedBasePrice=()=>useSizes?(document.getElementById("cupSizeChoice")?.value?Number(sizePriceMap[document.getElementById("cupSizeChoice").value]??p.price):initialPrice):Number(p.price);
-  const updatePrice=()=>{const extra=[...document.querySelectorAll(".addon-choice:checked")].reduce((s,c)=>s+Number(state.addons.find(a=>a.id===c.dataset.id)?.price||0),0)+(document.getElementById("spoonChoice")?.checked?Number(state.spoonPrice):0);document.getElementById("detailButtonPrice").textContent=money((selectedBasePrice()+extra)*qty);};
+  const updatePrice=()=>{const extra=[...document.querySelectorAll(".addon-choice:checked")].reduce((s,c)=>s+Number(state.addons.find(a=>a.id===c.dataset.id)?.price||0),0)+(Math.max(0,Math.min(20,Number(document.getElementById("spoonQuantity")?.value||0)))*Number(state.spoonPrice));document.getElementById("detailButtonPrice").textContent=money((selectedBasePrice()+extra)*qty);};
   document.getElementById("cupSizeChoice")?.addEventListener("change",updatePrice);
   document.getElementById("qtyMinus").onclick=()=>{qty=Math.max(1,qty-1);document.getElementById("productQty").textContent=qty;updatePrice();};
   document.getElementById("qtyPlus").onclick=()=>{qty++;document.getElementById("productQty").textContent=qty;updatePrice();};
@@ -233,7 +234,7 @@ function openProduct(id){
   const enforceLimit=(selector,limit,label)=>document.querySelectorAll(selector).forEach(c=>c.addEventListener("change",()=>{const checked=document.querySelectorAll(`${selector}:checked`);if(checked.length>limit){c.checked=false;toast(`Você pode escolher até ${limit} ${label}.`);}}));
   enforceLimit(".custom-choice",maxAccompaniments,"acompanhamento(s)");
   enforceLimit(".cream-choice",maxCreams,"creme(s) ou calda(s)");
-  document.getElementById("spoonChoice").addEventListener("change",updatePrice);
+  document.getElementById("spoonQuantity").addEventListener("input",e=>{const n=Math.max(0,Math.min(20,Math.floor(Number(e.target.value||0))));if(String(n)!==e.target.value)e.target.value=n;updatePrice();});
   updatePrice();
   document.getElementById("addProductToCart").onclick=()=>{
     const chosen=[...document.querySelectorAll(".addon-choice:checked")].map(c=>{const a=state.addons.find(x=>x.id===c.dataset.id);return {id:a.id,name:a.name,price:Number(a.price)};});
@@ -243,9 +244,9 @@ function openProduct(id){
     if(creamChosen.length>maxCreams){toast(`Escolha no máximo ${maxCreams} creme(s) ou calda(s).`);return;}
     const cupSize=useSizes?document.getElementById("cupSizeChoice").value:"";
     if(useSizes && !cupSize){toast("Selecione o tamanho do copo.");return;}
-    const wantsSpoon=document.getElementById("spoonChoice").checked;
+    const spoonQty=Math.max(0,Math.min(20,Math.floor(Number(document.getElementById("spoonQuantity").value||0))));
     const finalBasePrice=selectedBasePrice();
-    state.cart.push({key:uid(),productId:p.id,name:p.name,price:finalBasePrice,qty,cupSize,addons:chosen,customOptions:customChosen,creamOptions:creamChosen,wantsSpoon,spoonPrice:Number(state.spoonPrice)});
+    state.cart.push({key:uid(),productId:p.id,name:p.name,price:finalBasePrice,qty,cupSize,addons:chosen,customOptions:customChosen,creamOptions:creamChosen,spoonQty,wantsSpoon:spoonQty>0,spoonPrice:Number(state.spoonPrice)});
     saveState();showHome();toast("Produto adicionado ao pedido!");
   };
 }
@@ -253,7 +254,7 @@ function showHome(){document.getElementById("productPage").classList.add("hidden
 function openCheckout(){
   if(!state.cart.length)return;
   document.getElementById("homePage").classList.add("hidden");document.getElementById("productPage").classList.add("hidden");document.getElementById("checkoutPage").classList.remove("hidden");document.getElementById("cartBar").classList.add("hidden");
-  document.getElementById("checkoutItems").innerHTML=state.cart.map(i=>`<div class="checkout-line"><div><strong>${i.qty}× ${escapeHtml(i.name)}</strong><small>${i.cupSize?`Tamanho: ${escapeHtml(i.cupSize)} · `:""}${[...(i.customOptions||[]),...(i.creamOptions||[]),...(i.addons||[]).map(a=>a.name)].join(", ")||"Sem complementos selecionados"}${i.wantsSpoon?"<br>Colher: Sim":"<br>Colher: Não"}</small><button type="button" class="remove-cart-item" data-remove-cart="${i.key}">Remover este item</button></div><strong>${money(itemTotal(i))}</strong></div>`).join("");
+  document.getElementById("checkoutItems").innerHTML=state.cart.map(i=>`<div class="checkout-line"><div><strong>${i.qty}× ${escapeHtml(i.name)}</strong><small>${i.cupSize?`Tamanho: ${escapeHtml(i.cupSize)} · `:""}${[...(i.customOptions||[]),...(i.creamOptions||[]),...(i.addons||[]).map(a=>a.name)].join(", ")||"Sem complementos selecionados"}${Number(i.spoonQty ?? (i.wantsSpoon?1:0))>0?`<br>Colheres: ${Number(i.spoonQty ?? 1)} × ${money(i.spoonPrice||0)}`:"<br>Colheres: 0"}</small><button type="button" class="remove-cart-item" data-remove-cart="${i.key}">Remover este item</button></div><strong>${money(itemTotal(i))}</strong></div>`).join("");
   document.querySelectorAll("[data-remove-cart]").forEach(b=>b.onclick=()=>{state.cart=state.cart.filter(i=>i.key!==b.dataset.removeCart);saveState();if(state.cart.length)openCheckout();else showHome();toast("Item removido do pedido.");});
   document.getElementById("checkoutSubtotal").textContent=money(cartTotal());
   document.getElementById("checkoutTotal").textContent=money(cartTotal());
@@ -264,7 +265,9 @@ function openCheckout(){
   setDeliveryStatus("Aguardando verificação da localização.", "pending");
   updateDeliverySubmitState();
 }
-function submitOrder(e){
+let ordersViewMode="today";
+async function loadAdminOrders(mode=ordersViewMode){ordersViewMode=mode;const list=document.getElementById("adminOrdersList"),status=document.getElementById("ordersStatus");if(!list||!status)return;list.innerHTML="";status.textContent="Carregando pedidos…";if(!supabaseClient||!cloudSession){status.textContent="Entre na conta administrativa para consultar os pedidos.";return;}let query=supabaseClient.from("orders").select("*").order("created_at",{ascending:false}).limit(300);if(mode==="today"){const now=new Date(),start=new Date(now.getFullYear(),now.getMonth(),now.getDate()).toISOString();query=query.gte("created_at",start);}const {data,error}=await query;if(error){console.error(error);status.textContent="Não foi possível carregar. Confirme se executou o SQL de pedidos incluído neste ZIP.";return;}status.textContent=`${data.length} pedido(s) ${mode==="today"?"registrado(s) hoje":"no histórico recente (limite de 300)"}.`;list.innerHTML=data.map(o=>{const date=new Date(o.created_at).toLocaleString("pt-BR"),items=(o.items||[]).map(i=>`${i.qty}× ${escapeHtml(i.name)} — ${money(i.total||0)}`).join("<br>");return `<div class="admin-list-item"><div class="list-main"><strong>${escapeHtml(o.customer_name||"Cliente")} · ${money(o.total)}</strong><small>${date} · ${escapeHtml(o.payment||"")}</small><small>${escapeHtml(o.address||"")}</small><small>${items}</small><small>Entrega: ${money(o.delivery_fee||0)} · ${escapeHtml(o.notes||"Sem observações")}</small></div></div>`;}).join("")||'<p class="muted">Nenhum pedido encontrado neste período.</p>';}
+async function submitOrder(e){
   e.preventDefault();if(!state.cart.length)return;
   if(!isDeliveryCheckValid()){
     setDeliveryStatus("Antes de enviar, verifique sua localização e confirme que está dentro da área de entrega.","error");
@@ -272,10 +275,14 @@ function submitOrder(e){
     return;
   }
   const fd=new FormData(e.target),data=Object.fromEntries(fd.entries());
-  const lines=state.cart.map(i=>`${i.qty}x ${i.name} — ${money(itemTotal(i))}${(i.customOptions||[]).length?`\n  Acompanhamentos: ${i.customOptions.join(", ")}`:""}${i.cupSize?`\n  Tamanho do copo: ${i.cupSize}`:""}${(i.creamOptions||[]).length?`\n  Cremes e caldas: ${i.creamOptions.join(", ")}`:""}${i.addons.length?`\n  Adicionais: ${i.addons.map(a=>`${a.name} (+${money(a.price)})`).join(", ")}`:""}\n  Colher: ${i.wantsSpoon?`Sim (+${money(i.spoonPrice)})`:"Não"}`).join("\n\n");
+  const lines=state.cart.map(i=>`${i.qty}x ${i.name} — ${money(itemTotal(i))}${(i.customOptions||[]).length?`\n  Acompanhamentos: ${i.customOptions.join(", ")}`:""}${i.cupSize?`\n  Tamanho do copo: ${i.cupSize}`:""}${(i.creamOptions||[]).length?`\n  Cremes e caldas: ${i.creamOptions.join(", ")}`:""}${i.addons.length?`\n  Adicionais: ${i.addons.map(a=>`${a.name} (+${money(a.price)})`).join(", ")}`:""}\n  Colheres: ${Number(i.spoonQty ?? (i.wantsSpoon?1:0))} × ${money(i.spoonPrice||0)} = ${money(Number(i.spoonQty ?? (i.wantsSpoon?1:0))*Number(i.spoonPrice||0))}`).join("\n\n");
   const deliveryFee=deliveryFeeForDistance(deliveryCheck.distance);
   const grandTotal=cartTotal()+deliveryFee;
   const chargedKm=deliveryKmBracket(deliveryCheck.distance);
+  const orderRecord={customer_name:data.customerName,address:data.address,reference:data.reference||"",payment:data.payment,notes:data.notes||"",items:state.cart.map(i=>({name:i.name,qty:i.qty,cup_size:i.cupSize||"",custom_options:i.customOptions||[],cream_options:i.creamOptions||[],addons:i.addons||[],wants_spoon:Number(i.spoonQty ?? (i.wantsSpoon?1:0))>0,spoon_qty:Number(i.spoonQty ?? (i.wantsSpoon?1:0)),spoon_price:Number(i.spoonPrice||0),total:itemTotal(i)})),subtotal:cartTotal(),delivery_fee:deliveryFee,total:grandTotal,distance_km:Number(deliveryCheck.distance.toFixed(3))};
+  if(!supabaseClient){toast("Não foi possível registrar o pedido no sistema. Tente novamente.");return;}
+  const {error:orderError}=await supabaseClient.from("orders").insert(orderRecord);
+  if(orderError){console.error("Erro ao registrar pedido:",orderError);toast("Não foi possível registrar o pedido no sistema. Tente novamente.");return;}
   const message=`🍇 *NOVO PEDIDO — FÓRMULA AÇAÍ*\n\n*Itens do pedido:*\n${lines}\n\nSubtotal dos produtos: ${money(cartTotal())}\nTaxa de entrega (${chargedKm} km): ${money(deliveryFee)}\n*Total: ${money(grandTotal)}*\n\n*Dados do cliente:*\nNome: ${data.customerName}\nEndereço: ${data.address}\nPonto de referência: ${data.reference||"Não informado"}\nDistância estimada da loja: ${deliveryCheck.distance.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})} km\nPagamento: ${data.payment}\nObservações: ${data.notes||"Nenhuma"}`;
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`,"_blank");
   state.cart=[];saveState();e.target.reset();deliveryCheck=null;showHome();toast("Pedido recebido! Envie a mensagem pelo WhatsApp.");
@@ -358,10 +365,12 @@ function useBrowserLocation(){
 function openLogin(){document.getElementById("adminLoginModal").classList.remove("hidden");document.getElementById("adminPassword").value="";document.getElementById("loginError").classList.add("hidden");}
 function enterAdmin(){document.getElementById("adminLoginModal").classList.add("hidden");document.getElementById("homePage").classList.add("hidden");document.getElementById("productPage").classList.add("hidden");document.getElementById("checkoutPage").classList.add("hidden");document.getElementById("cartBar").classList.add("hidden");document.querySelector(".topbar").classList.add("hidden");document.querySelector(".site-footer").classList.add("hidden");document.getElementById("adminPage").classList.remove("hidden");renderAll();}
 function exitAdmin(){document.getElementById("adminPage").classList.add("hidden");document.querySelector(".topbar").classList.remove("hidden");document.querySelector(".site-footer").classList.remove("hidden");showHome();}
-function renderProductSizePriceFields(existing={}){const base=Number(document.getElementById("productPrice").value||0);document.getElementById("productSizePriceFields").innerHTML=(state.cupSizes||[]).map(size=>`<label>${escapeHtml(size)} (R$)<input class="product-size-price" data-size="${escapeHtml(size)}" type="number" min="0" step="0.01" value="${Number(existing[size]??base)}"></label>`).join("");}
-function updateProductTypeFields(){const custom=document.getElementById("productType").value==="custom";document.getElementById("customProductSettings").classList.toggle("hidden",!custom);document.getElementById("productSizePrices").classList.toggle("hidden",!custom||!document.getElementById("productUseSizes").checked);if(custom)renderProductSizePriceFields(window.editingSizePrices||{});}
+function selectedProductSizes(){return [...document.querySelectorAll("[name='productCupSizeChoice']:checked")].map(x=>x.value);}
+function renderProductCupSizeChecks(selected=state.cupSizes||[]){const box=document.getElementById("productCupSizeChecks");if(!box)return;box.innerHTML=(state.cupSizes||[]).map(size=>`<label class="check-option"><input type="checkbox" name="productCupSizeChoice" value="${escapeHtml(size)}" ${selected.includes(size)?"checked":""}> ${escapeHtml(size)}</label>`).join("");box.querySelectorAll("input").forEach(x=>x.addEventListener("change",()=>renderProductSizePriceFields(window.editingSizePrices||{})));}
+function renderProductSizePriceFields(existing={}){const base=Number(document.getElementById("productPrice").value||0),chosen=selectedProductSizes();document.getElementById("productSizePriceFields").innerHTML=chosen.map(size=>`<label>${escapeHtml(size)} (R$)<input class="product-size-price" data-size="${escapeHtml(size)}" type="number" min="0" step="0.01" value="${Number(existing[size]??base)}"></label>`).join("");}
+function updateProductTypeFields(){const custom=document.getElementById("productType").value==="custom",sizesOn=document.getElementById("productUseSizes").checked;document.getElementById("customProductSettings").classList.toggle("hidden",!custom);document.getElementById("productCupSizeChoices").classList.toggle("hidden",!custom||!sizesOn);document.getElementById("productSizePrices").classList.toggle("hidden",!custom||!sizesOn);if(custom&&sizesOn){renderProductCupSizeChecks(window.editingAvailableSizes||state.cupSizes||[]);renderProductSizePriceFields(window.editingSizePrices||{});}}
 
-function resetProductForm(){document.getElementById("productForm").reset();document.getElementById("editProductId").value="";document.getElementById("productFormTitle").textContent="Adicionar produto";document.getElementById("imagePreview").textContent="Prévia da imagem";document.getElementById("productActive").checked=true;document.getElementById("productAccompanimentLimit").value=state.accompanimentLimit;document.getElementById("productCreamLimit").value=state.creamLimit;document.getElementById("productUseSizes").checked=false;window.editingSizePrices={};selectedImageData="";renderProductFormChoices();updateProductTypeFields();}
+function resetProductForm(){document.getElementById("productForm").reset();document.getElementById("editProductId").value="";document.getElementById("productFormTitle").textContent="Adicionar produto";document.getElementById("imagePreview").textContent="Prévia da imagem";document.getElementById("productActive").checked=true;document.getElementById("productAccompanimentLimit").value=state.accompanimentLimit;document.getElementById("productCreamLimit").value=state.creamLimit;document.getElementById("productUseSizes").checked=false;window.editingSizePrices={};window.editingAvailableSizes=state.cupSizes||[];selectedImageData="";renderProductFormChoices();updateProductTypeFields();}
 function renderProductFormChoices(){
   document.getElementById("productCategories").innerHTML=state.categories.map(c=>`<label class="check-option"><input type="checkbox" name="categoryChoice" value="${escapeHtml(c)}"> ${escapeHtml(c)}</label>`).join("");
   const accomp=Array.from(new Set(state.products.flatMap(p=>p.accompaniments||[])));
@@ -370,12 +379,14 @@ function renderProductFormChoices(){
 function editProduct(id){
   const p=state.products.find(x=>x.id===id);if(!p)return;
   resetProductForm();document.getElementById("editProductId").value=p.id;document.getElementById("productFormTitle").textContent="Editar produto";
-  document.getElementById("productName").value=p.name;document.getElementById("productDescription").value=p.description;document.getElementById("productPrice").value=p.price;document.getElementById("productType").value=p.type;document.getElementById("productActive").checked=p.active;document.getElementById("productAccompanimentLimit").value=p.maxAccompaniments??state.accompanimentLimit;document.getElementById("productCreamLimit").value=p.maxCreams??state.creamLimit;document.getElementById("productUseSizes").checked=p.type==="custom"&&(p.useSizes===undefined?true:!!p.useSizes);window.editingSizePrices=p.sizePrices||{};selectedImageData=p.image||"";updateProductTypeFields();
+  document.getElementById("productName").value=p.name;document.getElementById("productDescription").value=p.description;document.getElementById("productPrice").value=p.price;document.getElementById("productType").value=p.type;document.getElementById("productActive").checked=p.active;document.getElementById("productAccompanimentLimit").value=p.maxAccompaniments??state.accompanimentLimit;document.getElementById("productCreamLimit").value=p.maxCreams??state.creamLimit;document.getElementById("productUseSizes").checked=p.type==="custom"&&(p.useSizes===undefined?true:!!p.useSizes);window.editingSizePrices=p.sizePrices||{};window.editingAvailableSizes=p.availableSizes?.length?p.availableSizes:(state.cupSizes||[]);selectedImageData=p.image||"";updateProductTypeFields();
   document.getElementById("imagePreview").innerHTML=p.image?`<img src="${p.image}" alt="Prévia">`:"Prévia da imagem";
   document.querySelectorAll('[name="categoryChoice"]').forEach(c=>c.checked=p.categories.includes(c.value));
   document.querySelectorAll('[name="accompChoice"]').forEach(c=>c.checked=(p.accompaniments||[]).includes(c.value));
   window.scrollTo({top:0,behavior:"smooth"});
 }
+function renderAdminCategories(){const list=document.getElementById("adminCategoryList");if(!list)return;list.innerHTML=state.categories.map(c=>`<div class="admin-list-item"><div class="list-main"><strong>${escapeHtml(c)}</strong></div><div class="list-actions"><button type="button" class="small-button danger" data-delete-category="${escapeHtml(c)}">Excluir categoria</button></div></div>`).join("")||'<p class="muted">Nenhuma categoria cadastrada.</p>';list.querySelectorAll("[data-delete-category]").forEach(btn=>btn.onclick=()=>{const name=btn.dataset.deleteCategory;if(!confirm(`Excluir a categoria "${name}"? Os produtos associados ficarão sem essa categoria.`))return;state.categories=state.categories.filter(c=>c!==name);state.products.forEach(p=>p.categories=(p.categories||[]).filter(c=>c!==name));if(selectedCategory===name)selectedCategory="Todos";saveState();renderProductFormChoices();toast("Categoria excluída.");});}
+function addCategory(){const input=document.getElementById("newCategoryName"),name=input.value.trim();if(!name)return toast("Digite o nome da categoria.");if(state.categories.some(c=>c.toLowerCase()===name.toLowerCase()))return toast("Essa categoria já existe.");state.categories.push(name);input.value="";saveState();renderProductFormChoices();toast("Categoria adicionada.");}
 function renderAdminProducts(){
   const list=document.getElementById("adminProductList");if(!list)return;
   document.getElementById("adminProductCount").textContent=state.products.length;
@@ -428,6 +439,7 @@ function renderPaymentOptions(){
 }
 function switchTab(id){
   document.querySelectorAll(".admin-tab-content").forEach(x=>x.classList.add("hidden"));document.getElementById(id).classList.remove("hidden");
+  if(id==="ordersTab")loadAdminOrders("today");
   document.querySelectorAll(".tab-button").forEach(b=>b.classList.toggle("active",b.dataset.tab===id));
 }
 
@@ -447,8 +459,13 @@ document.getElementById("loginForm").onsubmit=async e=>{e.preventDefault();const
 document.getElementById("publishCloudState").onclick=publishInitialCloudState;
 document.getElementById("cloudAdminLogout").onclick=async()=>{if(supabaseClient)await supabaseClient.auth.signOut();cloudSession=null;updateCloudAdminUI();setCloudStatus("Conta administrativa desconectada.","Desconectado");};
 document.getElementById("closeAdmin").onclick=exitAdmin;
+document.getElementById("refreshOrders").onclick=()=>loadAdminOrders();
+document.getElementById("todayOrdersButton").onclick=()=>loadAdminOrders("today");
+document.getElementById("allOrdersButton").onclick=()=>loadAdminOrders("all");
 document.querySelectorAll(".tab-button").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
 document.getElementById("resetProductForm").onclick=resetProductForm;
+document.getElementById("addCategoryButton").onclick=addCategory;
+document.getElementById("newCategoryName").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();addCategory();}});
 document.getElementById("productType").addEventListener("change",updateProductTypeFields);
 document.getElementById("productUseSizes").addEventListener("change",updateProductTypeFields);
 document.getElementById("productImage").onchange=async e=>{
@@ -487,9 +504,10 @@ document.getElementById("productForm").onsubmit=e=>{
   const id=document.getElementById("editProductId").value;
   const categories=[...document.querySelectorAll('[name="categoryChoice"]:checked')].map(c=>c.value);
   if(!categories.length){toast("Selecione pelo menos uma categoria para o produto.");return;}
+  if(type==="custom"&&document.getElementById("productUseSizes").checked&&!selectedProductSizes().length){toast("Selecione pelo menos um tamanho para este produto.");return;}
   const accompaniments=[...document.querySelectorAll('[name="accompChoice"]:checked')].map(c=>c.value);
   const type=document.getElementById("productType").value;
-  const data={id:id||uid(),name:document.getElementById("productName").value.trim(),description:document.getElementById("productDescription").value.trim(),price:Number(document.getElementById("productPrice").value),type,categories,active:document.getElementById("productActive").checked,image:selectedImageData,accompaniments,maxAccompaniments:type==="custom"?Math.max(0,Number(document.getElementById("productAccompanimentLimit").value||0)):0,maxCreams:type==="custom"?Math.max(0,Number(document.getElementById("productCreamLimit").value||0)):0,useSizes:type==="custom"&&document.getElementById("productUseSizes").checked,sizePrices:type==="custom"&&document.getElementById("productUseSizes").checked?Object.fromEntries([...document.querySelectorAll(".product-size-price")].map(input=>[input.dataset.size,Math.max(0,Number(input.value||0))])):{}};
+  const data={id:id||uid(),name:document.getElementById("productName").value.trim(),description:document.getElementById("productDescription").value.trim(),price:Number(document.getElementById("productPrice").value),type,categories,active:document.getElementById("productActive").checked,image:selectedImageData,accompaniments,maxAccompaniments:type==="custom"?Math.max(0,Number(document.getElementById("productAccompanimentLimit").value||0)):0,maxCreams:type==="custom"?Math.max(0,Number(document.getElementById("productCreamLimit").value||0)):0,useSizes:type==="custom"&&document.getElementById("productUseSizes").checked,availableSizes:type==="custom"&&document.getElementById("productUseSizes").checked?selectedProductSizes():[],sizePrices:type==="custom"&&document.getElementById("productUseSizes").checked?Object.fromEntries([...document.querySelectorAll(".product-size-price")].map(input=>[input.dataset.size,Math.max(0,Number(input.value||0))])):{}};
   const previousIndex=id?state.products.findIndex(p=>p.id===id):-1;
   const previousProduct=previousIndex>=0?state.products[previousIndex]:null;
   if(id){if(previousIndex<0){toast("Não foi possível localizar o produto para edição.");return;}state.products[previousIndex]=data;}else state.products.push(data);

@@ -116,10 +116,12 @@
       <button class="tab-button active" data-tab="productsTab">Produtos</button>
       <button class="tab-button" data-tab="addonsTab">Adicionais</button>
       <button class="tab-button" data-tab="customTab">Montagem</button>
+      <button class="tab-button" data-tab="ordersTab">Pedidos</button>
       <button class="tab-button" data-tab="settingsTab">Configurações</button>
     </div>
 
     <div id="productsTab" class="admin-tab-content">
+      <div class="admin-panel category-manager"><div class="panel-heading"><h2>Gerenciar categorias</h2></div><div class="form-row"><label>Nova categoria<input id="newCategoryName" placeholder="Ex.: Promoções"></label><button type="button" id="addCategoryButton" class="primary-button">Adicionar categoria</button></div><div id="adminCategoryList" class="admin-list"></div></div>
       <div class="admin-columns">
         <form id="productForm" class="admin-panel">
           <div class="panel-heading"><div><span class="eyebrow purple">CADASTRO</span><h2 id="productFormTitle">Adicionar produto</h2></div><button type="button" id="resetProductForm" class="text-button">Limpar</button></div>
@@ -142,6 +144,7 @@
               <label>Quantidade máxima de cremes e caldas<input id="productCreamLimit" type="number" min="0" step="1" value="2"></label>
             </div>
             <label class="check-line"><input id="productUseSizes" type="checkbox"> Exibir tabela de tamanhos para este produto</label>
+            <div id="productCupSizeChoices" class="hidden"><p class="tiny muted">Selecione somente os tamanhos disponíveis neste produto.</p><div id="productCupSizeChecks" class="check-grid"></div></div>
             <div id="productSizePrices" class="hidden">
               <p class="tiny muted">Defina o preço de cada tamanho. O cliente verá o valor correspondente ao selecionar.</p>
               <div id="productSizePriceFields" class="form-row"></div>
@@ -195,6 +198,7 @@
       </div>
     </div>
 
+    <div id="ordersTab" class="admin-tab-content hidden"><div class="admin-panel"><div class="panel-heading"><div><span class="eyebrow purple">ACOMPANHAMENTO</span><h2>Pedidos da loja</h2></div><button id="refreshOrders" class="secondary-button" type="button">Atualizar</button></div><div class="form-row"><button id="todayOrdersButton" class="primary-button" type="button">Pedidos de hoje</button><button id="allOrdersButton" class="secondary-button" type="button">Histórico completo</button></div><p id="ordersStatus" class="muted tiny">Carregue os pedidos para visualizar.</p><div id="adminOrdersList" class="admin-list"></div></div></div>
     <div id="settingsTab" class="admin-tab-content hidden">
       <div class="admin-panel settings-panel">
         <span class="eyebrow purple">PREFERÊNCIAS DA LOJA</span><h2>Formas de pagamento aceitas</h2>
@@ -227,7 +231,7 @@
           <label>10 km (R$)<input id="deliveryPrice10" type="number" min="0" step="0.01" value="0.00"></label>
         </div>
         <h2>Valor da colher</h2>
-        <p class="muted">O cliente será perguntado separadamente dos adicionais se deseja colher em cada produto.</p>
+        <p class="muted">O cliente informa quantas colheres deseja em cada produto. O preço unitário é configurado uma única vez aqui.</p>
         <label>Preço da colher (R$)<input id="spoonPrice" type="number" min="0" step="0.01" value="0.00"></label>
         <button id="saveSettings" class="primary-button">Salvar configurações</button>
         <div class="admin-panel cloud-panel">
