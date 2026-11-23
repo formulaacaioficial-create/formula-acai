@@ -282,7 +282,8 @@ async function submitOrder(e){
   const deliveryFee=deliveryFeeForDistance(deliveryCheck.distance);
   const grandTotal=cartTotal()+deliveryFee;
   const chargedKm=deliveryKmBracket(deliveryCheck.distance);
-  const orderRecord={customer_name:data.customerName,address:data.address,reference:data.reference||"",payment:data.payment,notes:data.notes||"",items:state.cart.map(i=>({name:i.name,qty:i.qty,cup_size:i.cupSize||"",custom_options:i.customOptions||[],cream_options:i.creamOptions||[],addons:i.addons||[],wants_spoon:Number(i.spoonQty ?? (i.wantsSpoon?1:0))>0,spoon_qty:Number(i.spoonQty ?? (i.wantsSpoon?1:0)),spoon_price:Number(i.spoonPrice||0),total:itemTotal(i)})),subtotal:cartTotal(),delivery_fee:deliveryFee,total:grandTotal,distance_km:Number(deliveryCheck.distance.toFixed(3)),delivery_latitude:Number(deliveryCheck.lat),delivery_longitude:Number(deliveryCheck.lon)};
+  const orderNumber=`FA-${Date.now()}-${Math.random().toString(36).slice(2,8).toUpperCase()}`;
+  const orderRecord={order_number:orderNumber,customer_name:data.customerName,address:data.address,reference:data.reference||"",payment:data.payment,notes:data.notes||"",items:state.cart.map(i=>({name:i.name,qty:i.qty,cup_size:i.cupSize||"",custom_options:i.customOptions||[],cream_options:i.creamOptions||[],addons:i.addons||[],wants_spoon:Number(i.spoonQty ?? (i.wantsSpoon?1:0))>0,spoon_qty:Number(i.spoonQty ?? (i.wantsSpoon?1:0)),spoon_price:Number(i.spoonPrice||0),total:itemTotal(i)})),subtotal:cartTotal(),delivery_fee:deliveryFee,total:grandTotal,distance_km:Number(deliveryCheck.distance.toFixed(3)),delivery_latitude:Number(deliveryCheck.lat),delivery_longitude:Number(deliveryCheck.lon)};
   if(!supabaseClient){toast("Conexão com o Supabase indisponível. Atualize a página e tente novamente.");return;}
   let orderError=null;
   try{const result=await supabaseClient.from("orders").insert(orderRecord);orderError=result.error;}catch(err){orderError=err;}
