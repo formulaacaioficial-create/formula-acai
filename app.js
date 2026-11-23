@@ -46,6 +46,9 @@ let currentProduct = null;
 let selectedImageData = "";
 let toastTimer;
 let deliveryCheck = null;
+let deliveryMap = null;
+let deliveryMapMarker = null;
+let pendingMapPoint = null;
 let supabaseClient = null;
 let cloudSession = null;
 let cloudHasData = false;
@@ -279,11 +282,12 @@ async function submitOrder(e){
   const deliveryFee=deliveryFeeForDistance(deliveryCheck.distance);
   const grandTotal=cartTotal()+deliveryFee;
   const chargedKm=deliveryKmBracket(deliveryCheck.distance);
-  const orderRecord={customer_name:data.customerName,address:data.address,reference:data.reference||"",payment:data.payment,notes:data.notes||"",items:state.cart.map(i=>({name:i.name,qty:i.qty,cup_size:i.cupSize||"",custom_options:i.customOptions||[],cream_options:i.creamOptions||[],addons:i.addons||[],wants_spoon:Number(i.spoonQty ?? (i.wantsSpoon?1:0))>0,spoon_qty:Number(i.spoonQty ?? (i.wantsSpoon?1:0)),spoon_price:Number(i.spoonPrice||0),total:itemTotal(i)})),subtotal:cartTotal(),delivery_fee:deliveryFee,total:grandTotal,distance_km:Number(deliveryCheck.distance.toFixed(3))};
-  if(!supabaseClient){toast("Não foi possível registrar o pedido no sistema. Tente novamente.");return;}
-  const {error:orderError}=await supabaseClient.from("orders").insert(orderRecord);
-  if(orderError){console.error("Erro ao registrar pedido:",orderError);toast("Não foi possível registrar o pedido no sistema. Tente novamente.");return;}
-  const message=`🍇 *NOVO PEDIDO — FÓRMULA AÇAÍ*\n\n*Itens do pedido:*\n${lines}\n\nSubtotal dos produtos: ${money(cartTotal())}\nTaxa de entrega (${chargedKm} km): ${money(deliveryFee)}\n*Total: ${money(grandTotal)}*\n\n*Dados do cliente:*\nNome: ${data.customerName}\nEndereço: ${data.address}\nPonto de referência: ${data.reference||"Não informado"}\nDistância estimada da loja: ${deliveryCheck.distance.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})} km\nPagamento: ${data.payment}\nObservações: ${data.notes||"Nenhuma"}`;
+  const orderRecord={customer_name:data.customerName,address:data.address,reference:data.reference||"",payment:data.payment,notes:data.notes||"",items:state.cart.map(i=>({name:i.name,qty:i.qty,cup_size:i.cupSize||"",custom_options:i.customOptions||[],cream_options:i.creamOptions||[],addons:i.addons||[],wants_spoon:Number(i.spoonQty ?? (i.wantsSpoon?1:0))>0,spoon_qty:Number(i.spoonQty ?? (i.wantsSpoon?1:0)),spoon_price:Number(i.spoonPrice||0),total:itemTotal(i)})),subtotal:cartTotal(),delivery_fee:deliveryFee,total:grandTotal,distance_km:Number(deliveryCheck.distance.toFixed(3)),delivery_latitude:Number(deliveryCheck.lat),delivery_longitude:Number(deliveryCheck.lon)};
+  if(!supabaseClient){toast("Conexão com o Supabase indisponível. Atualize a página e tente novamente.");return;}
+  let orderError=null;
+  try{const result=await supabaseClient.from("orders").insert(orderRecord);orderError=result.error;}catch(err){orderError=err;}
+  if(orderError){console.error("Erro ao registrar pedido:",orderError);const detail=[orderError.code,orderError.message,orderError.details].filter(Boolean).join(" — ");toast(`Falha ao salvar pedido: ${detail||"erro desconhecido"}`);return;}
+  const message=`🍇 *NOVO PEDIDO — FÓRMULA AÇAÍ*\n\n*Itens do pedido:*\n${lines}\n\nSubtotal dos produtos: ${money(cartTotal())}\nTaxa de entrega (${chargedKm} km): ${money(deliveryFee)}\n*Total: ${money(grandTotal)}*\n\n*Dados do cliente:*\nNome: ${data.customerName}\nEndereço: ${data.address}\nLocalização no mapa: https://www.google.com/maps?q=${deliveryCheck.lat},${deliveryCheck.lon}\nPonto de referência: ${data.reference||"Não informado"}\nDistância estimada da loja: ${deliveryCheck.distance.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})} km\nPagamento: ${data.payment}\nObservações: ${data.notes||"Nenhuma"}`;
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`,"_blank");
   state.cart=[];saveState();e.target.reset();deliveryCheck=null;showHome();toast("Pedido recebido! Envie a mensagem pelo WhatsApp.");
 }
@@ -360,6 +364,43 @@ function useBrowserLocation(){
     const message=err.code===1?"Permita o acesso à localização no navegador ou verifique o endereço digitado.":err.code===2?"Não foi possível determinar sua localização. Tente novamente ou verifique o endereço digitado.":"A localização demorou para responder. Tente novamente ou verifique o endereço digitado.";
     setDeliveryStatus(message,"error");btn.disabled=false;btn.textContent="📍 Usar minha localização";
   },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+}
+
+async function reverseGeocodeDelivery(lat,lon){
+  const query=new URLSearchParams({format:"jsonv2",lat:String(lat),lon:String(lon),zoom:"18",addressdetails:"1"});
+  const response=await fetch(`https://nominatim.openstreetmap.org/reverse?${query.toString()}`,{headers:{"Accept":"application/json"}});
+  if(!response.ok)throw new Error("Não foi possível obter o endereço desse ponto do mapa.");
+  const result=await response.json();
+  return result.display_name||`${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+}
+function initializeDeliveryMap(){
+  const panel=document.getElementById("addressMapPanel");panel.classList.remove("hidden");
+  if(!window.L){setDeliveryStatus("O mapa não carregou. Verifique sua conexão e tente novamente.","error");return;}
+  if(!deliveryMap){
+    const center=[Number(state.storeLatitude),Number(state.storeLongitude)];
+    deliveryMap=L.map("deliveryMap").setView(center,14);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap"}).addTo(deliveryMap);
+    L.marker(center).addTo(deliveryMap).bindPopup("Fórmula Açaí — loja");
+    deliveryMap.on("click",event=>{
+      pendingMapPoint={lat:event.latlng.lat,lon:event.latlng.lng};
+      if(deliveryMapMarker)deliveryMap.removeLayer(deliveryMapMarker);
+      deliveryMapMarker=L.marker(event.latlng).addTo(deliveryMap).bindPopup("Local de entrega selecionado").openPopup();
+      document.getElementById("confirmMapLocation").disabled=false;
+      setDeliveryStatus("Local marcado! Toque em “Confirmar localização marcada”.","pending");
+    });
+  }
+  setTimeout(()=>deliveryMap.invalidateSize(),150);
+}
+async function confirmDeliveryMapPoint(){
+  if(!pendingMapPoint)return;
+  const button=document.getElementById("confirmMapLocation");button.disabled=true;button.textContent="Obtendo endereço…";
+  try{
+    const address=await reverseGeocodeDelivery(pendingMapPoint.lat,pendingMapPoint.lon);
+    const input=document.getElementById("customerAddress");input.value=address;
+    applyDeliveryCoordinates(pendingMapPoint.lat,pendingMapPoint.lon,"mapa");
+    document.getElementById("addressMapPanel").classList.add("hidden");
+  }catch(error){setDeliveryStatus(error.message||"Não foi possível confirmar esse ponto.","error");}
+  finally{button.disabled=!pendingMapPoint;button.textContent="Confirmar localização marcada";}
 }
 
 function openLogin(){document.getElementById("adminLoginModal").classList.remove("hidden");document.getElementById("adminPassword").value="";document.getElementById("loginError").classList.add("hidden");}
@@ -451,6 +492,8 @@ document.getElementById("checkoutButton").onclick=openCheckout;
 document.getElementById("customerForm").addEventListener("submit",submitOrder);
 document.getElementById("useMyLocation").addEventListener("click",useBrowserLocation);
 document.getElementById("checkTypedAddress").addEventListener("click",checkTypedAddress);
+document.getElementById("openAddressMap").addEventListener("click",initializeDeliveryMap);
+document.getElementById("confirmMapLocation").addEventListener("click",confirmDeliveryMapPoint);
 document.getElementById("customerAddress").addEventListener("input",()=>{deliveryCheck=null;setDeliveryStatus("O endereço foi alterado. Faça a verificação novamente.","pending");updateDeliverySubmitState();updateDeliveryPriceUI();});
 document.getElementById("openAdmin").onclick=openLogin;
 document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>document.getElementById(b.dataset.close).classList.add("hidden"));

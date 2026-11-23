@@ -81,3 +81,6 @@ A distância é calculada em linha reta (fórmula de Haversine), não pelo percu
 
 ### Colheres por produto
 O cliente informa a quantidade de colheres (de 0 a 20) em cada produto. O painel de gestão configura um único preço unitário; o sistema calcula quantidade × preço unitário, apresenta o valor no carrinho e registra a quantidade e o preço no JSON do pedido. Pedidos antigos continuam compatíveis: quando não houver `spoonQty`, o campo legado `wantsSpoon` é interpretado como zero ou uma colher.
+
+
+Atualização: seleção do endereço pelo mapa (Leaflet/OpenStreetMap), gravação das coordenadas no pedido e link de localização no WhatsApp. Inclui `formula-acai-orders-repair.sql`, uma migração idempotente para completar as colunas e políticas da tabela de pedidos sem alterar `store_state`. Se o salvamento do pedido falhar, a tela agora apresenta o código e a mensagem retornados pelo Supabase para facilitar o diagnóstico.

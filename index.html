@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#300638">
   <title>Fórmula Açaí | Cardápio digital</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -58,7 +59,13 @@
           <h3 id="deliveryCheckTitle">Verifique se entregamos no seu endereço</h3>
           <p class="tiny muted">Nossa área de entrega é de até <strong id="deliveryRadiusLabel">10 km</strong> da loja.</p>
           <button type="button" id="useMyLocation" class="secondary-button delivery-location-button">📍 Usar minha localização</button>
-          <p class="tiny muted">Ou informe seu endereço abaixo e toque em “Verificar endereço”. Ao validar o endereço, ele será consultado no serviço OpenStreetMap para estimar a localização.</p>
+          <button type="button" id="openAddressMap" class="secondary-button delivery-location-button">🗺️ Escolher endereço no mapa</button>
+          <div id="addressMapPanel" class="address-map-panel hidden">
+            <p class="tiny muted">Toque no mapa para posicionar o marcador exatamente no local de entrega. Depois, confirme a localização.</p>
+            <div id="deliveryMap" role="application" aria-label="Mapa para escolher o endereço de entrega"></div>
+            <button type="button" id="confirmMapLocation" class="primary-button full" disabled>Confirmar localização marcada</button>
+          </div>
+          <p class="tiny muted">Se preferir, você também pode digitar o endereço e verificá-lo abaixo.</p>
           <div id="deliveryStatus" class="delivery-status" role="status" aria-live="polite">Aguardando verificação da localização.</div>
         </section>
         <label>Endereço<input name="address" id="customerAddress" required placeholder="Rua, número, bairro, cidade..."></label>
@@ -247,10 +254,9 @@
   </section>
 
   <div id="toast" class="toast" role="status"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
-
-.choice-limit{font-size:.78rem;color:#8e3cab;font-weight:600;margin-left:6px}.limits-panel{margin:22px 0}.cream-admin-columns{margin-top:22px}.limits-panel .form-row{max-width:760px}
